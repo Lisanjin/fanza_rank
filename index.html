@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>fanza精神股东大会</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<!-- 引入Bootstrap样式 -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+<!-- 引入DatePicker样式 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+<script src="https://code.jquery.com/jquery-3.6.4.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+<style>
+    /* 自定义滚动容器样式 */
+    .scrollable-list {
+      max-height: 70vh; /* 设置最大高度为屏幕高度的70% */
+      overflow-y: auto; /* 开启垂直滚动条 */
+    }
+  </style>
+</head>
+<body>
+
+    <div class="container-fluid mt-5">
+        <div class="row">
+          <!-- 左侧占比为2 -->
+          <div class="col-2 list_container">
+            <!-- 这里放置左侧内容 -->
+            <div class="container mt-5">
+                <div class="input-group mb-3 smaller-width">
+                  <input type="text" class="form-control datepicker" placeholder="选择日期">
+                  <div class="input-group-append">
+                    <span class="input-group-text"><i class="fa fa-calendar"></i></span>
+                  </div>
+                </div>
+              </div>
+              <div class="scrollable-list" id="scrollableList">
+                <!-- 滚动容器中的内容将在这里动态生成 -->
+              </div>
+          </div>
+          <!-- 右侧占比为8 -->
+          <div class="col-8 canvas_container">
+            <!-- 这里放置右侧内容 -->
+            <canvas id="rankChart" width="800" height="400"></canvas>
+          </div>
+        </div>
+    </div>
+      
+
+    <script>
+          // 初始化日期选择器
+  $(document).ready(function(){
+    var currentDate = new Date();
+
+    $('.datepicker').datepicker({
+      format: 'yyyy-mm-dd', // 设置日期格式
+      autoclose: true,       // 选择日期后自动关闭
+      todayHighlight: true   // 高亮显示当前日期
+    }).datepicker('setDate', currentDate);
+
+    $('.datepicker').on('changeDate', function(e){
+      // 获取选择的日期
+      var selectedDate = e.format('yyyy-mm-dd');
+      // 判断选择的日期是否大于当日
+      if (new Date(selectedDate) > currentDate) {
+        // 弹窗报错
+        alert('别急，你先别急');
+      } else {
+        const scrollableList = document.getElementById('scrollableList');
+        // 清空滚动容器中的所有元素
+        scrollableList.innerHTML = '';
+        fetchData(selectedDate);
+      }
+    });
+  });
+
+  async function fetch_date_rank_Data(date) {
+  try {
+    const response = await fetch(`https://fanzarank.sanjinli.repl.co/date/${date}`);
+    const apiData = await response.json();
+
+    
+    const scrollableList = document.getElementById('scrollableList');
+
+    apiData.forEach(item => {
+        // 创建列表项
+    const listItem = document.createElement('div');
+    listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+    // 创建图像元素
+    const imgElement = document.createElement('img');
+    imgElement.src = item.image_url;
+    imgElement.alt = item.name;
+    imgElement.className = 'img-thumbnail';
+    imgElement.style.width = '100px'; // 图片宽度为100px
+    imgElement.style.height = '100px'; // 图片高度为100px
+
+    // 创建名称元素
+    const nameElement = document.createElement('span');
+    nameElement.textContent = item.name;
+    nameElement.style.margin = 'auto'; // 在 Flexbox 中上下居中
+
+    const rankElement = document.createElement('span');
+    rankElement.textContent = item.rank;
+    rankElement.style.margin = 'auto'; // 在 Flexbox 中上下居中
+    rankElement.style.fontWeight = 'bold';
+
+    // 创建 Flexbox 容器用于左右排布
+    const flexContainer = document.createElement('div');
+    flexContainer.style.display = 'flex';
+    flexContainer.style.width = '100%';
+
+    // 将图像和名称添加到 Flexbox 容器中
+    flexContainer.appendChild(imgElement);
+    flexContainer.appendChild(nameElement);
+    flexContainer.appendChild(rankElement);
+    // 将 Flexbox 容器添加到列表项中
+    listItem.appendChild(flexContainer);
+
+    // 将列表项添加到滚动容器中
+    scrollableList.appendChild(listItem);
+
+    listItem.addEventListener('click', function() {
+
+        const canvas = document.getElementById('rankChart');
+        // 检查 canvas 上是否已经有 Chart 实例
+        const existingChart = Chart.getChart(canvas);
+
+        // 如果存在，则销毁它
+        if (existingChart) {
+        existingChart.destroy();
+        }
+        fetch_game_rank_Data(nameElement.textContent);
+        
+    });
+
+  });
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  }
+}
+
+  function fetch_game_rank_Data(name) {
+    
+        fetch('https://fanzarank.sanjinli.repl.co/name/'+name)
+            .then(response => response.json())
+            .then(data => {
+                const labels = data.map(entry => entry.date);
+                const rankData = data.map(entry => entry.rank);
+
+                // 将日期字符串解析为 JavaScript Date 对象
+                const parsedDates = labels.map(dateString => new Date(dateString));
+
+                const ctx = document.getElementById('rankChart').getContext('2d');
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: parsedDates,
+                        datasets: [{
+                            label: name+' Rank',
+                            data: rankData,
+                            borderColor: 'rgb(75, 192, 192)',
+                            borderWidth: 5,
+                            fill: false,
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',  // 设置日期轴显示的时间单位
+                                    displayFormats: {
+                                        day: 'yyyy-MM-dd'
+                                    }
+                                },
+                                position: 'bottom',
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            },
+                            y: {
+                                reverse: true,
+                                title: {
+                                    display: true,
+                                    text: 'Rank'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'red'  // 设置图例文字颜色
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Legend',
+                                    color: 'white'  // 设置图例标题颜色
+                                },
+                                backgroundColor: 'black'  // 设置图例背景颜色
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error("Error fetching data:", error));
+        }
+
+window.onload = function() {
+  // 执行你的打印函数
+    fetch_game_rank_Data("DeepOne 虚無と夢幻のフラグメント R");
+
+    const currentMilliseconds = Date.now();
+    const date = new Date(currentMilliseconds);
+
+    const options = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'Asia/Tokyo', // 东九区的时区
+        };
+
+// 格式化日期时间
+const formattedDate = new Intl.DateTimeFormat('zh-CN', options).format(date);
+const extractedHour = formattedDate.slice(11, 13);
+
+if (extractedHour <12) {
+    const yesterday = currentMilliseconds - 86400000;
+    const yesterdayDate = new Date(yesterday);
+    const yesterdayFormatted = new Intl.DateTimeFormat('zh-CN', options).format(yesterdayDate);
+
+    const quertDate = yesterdayFormatted.slice(0, 11).replaceAll('/','-');
+    fetch_date_rank_Data(quertDate);
+}else{
+    const quertDate = formattedDate.slice(0, 11).replaceAll('/','-');
+    fetch_date_rank_Data(quertDate);
+}
+
+  
+};
+    </script>
+</body>
+</html>
