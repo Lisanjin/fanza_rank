@@ -63,6 +63,7 @@
       
 
     <script>
+        var api_path = "http://121.37.154.43:8000/"
   let global_game_name = "DeepOne 虚無と夢幻のフラグメント R"; 
           // 初始化日期选择器
   $(document).ready(function(){
@@ -129,7 +130,7 @@
 
   async function fetch_date_rank_Data(date) {
   try {
-    const response = await fetch(`https://fanzarank.sanjinli.repl.co/date/${date}`);
+    const response = await fetch(api_path+`date/${date}`);
     const apiData = await response.json();
 
     
@@ -197,7 +198,7 @@
 }
 function fetch_game_rank_Data_range(data1,data2) {
     
-    fetch('https://fanzarank.sanjinli.repl.co/date_range/'+global_game_name+"/"+data1+"/"+data2)
+    fetch(api_path+'date_range/'+global_game_name+"/"+data1+"/"+data2)
         .then(response => response.json())
         .then(data => {
             const labels = data.map(entry => entry.date);
@@ -265,7 +266,7 @@ function fetch_game_rank_Data_range(data1,data2) {
 
   function fetch_game_rank_Data(name) {
     
-        fetch('https://fanzarank.sanjinli.repl.co/name/'+name)
+        fetch(api_path+'name/'+name)
             .then(response => response.json())
             .then(data => {
                 const labels = data.map(entry => entry.date);
